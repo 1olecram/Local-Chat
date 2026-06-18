@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Chat CEFET{% endblock %}</title>
+    
+    <!-- Importando o Tailwind via CDN (A forma mais simples!) -->
+    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+    
+    <!-- Configuração básica de cores do Tailwind (opcional) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: '#1E3A8A', // Azul escuro para o tema
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans antialiased text-gray-900">
+    
+    <!-- Barra de Navegação (Aparece em todas as páginas que herdarem a base) -->
+    <nav class="bg-brand text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="font-bold text-xl">💬 Sistemas Distribuídos - Chat</div>
+            <div class="text-sm">
+                <!-- Se o utilizador estiver logado, mostramos o nome e botão de sair -->
+                {% if user.is_authenticated %}
+                    Olá, <span class="font-semibold">{{ user.username }}</span>! 
+                    <a href="#" class="ml-4 hover:underline text-red-300">Sair</a>
+                {% else %}
+                    Não autenticado
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Aqui é onde o conteúdo específico de cada página vai ser "injetado" -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}
+        <!-- O conteúdo do login ou do chat virá para aqui -->
+        {% endblock %}
+    </main>
+
+</body>
+</html>
