@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+{% block title %}Local Chat{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-[280px_1fr] gap-5 h-[calc(100vh-160px)]">
+
+    <!-- Lista de conversas -->
+    <aside class="bg-surface border border-border rounded-lg flex flex-col overflow-hidden">
+        <div class="p-4 border-b border-border flex items-center justify-between">
+            <span class="font-mono text-xs text-dim uppercase tracking-wider">conversas</span>
+            <button id="newChatBtn" title="Nova conversa"
+                class="h-6 w-6 flex items-center justify-center rounded-md bg-surfacealt text-signal hover:bg-base transition text-sm leading-none">
+                +
+            </button>
+        </div>
+        <div id="chatList" class="flex-1 overflow-y-auto">
+            <p class="text-dim text-xs font-mono p-4">carregando...</p>
+        </div>
+        <div class="p-3 border-t border-border flex items-center justify-between">
+            <span class="font-mono text-xs text-dim" id="currentUserLabel">-</span>
+            <button id="logoutBtn" class="font-mono text-xs text-alert hover:underline">sair</button>
+        </div>
+    </aside>
+
+    <!-- Área de mensagens -->
+    <section class="bg-surface border border-border rounded-lg flex flex-col overflow-hidden">
+        <div id="emptyState" class="flex-1 flex items-center justify-center text-center px-6">
+            <div>
+                <p class="text-dim font-mono text-sm">nenhuma conversa selecionada</p>
+                <p class="text-dim/70 text-xs mt-1">escolha uma conversa ou crie uma nova</p>
+            </div>
+        </div>
+
+        <div id="activeChat" class="flex-1 flex flex-col hidden">
+            <div class="px-5 py-3.5 border-b border-border flex items-center justify-between">
+                <div>
+                    <p id="chatTitle" class="font-medium text-sm">-</p>
+                    <p id="chatSubtitle" class="text-dim text-xs font-mono mt-0.5">-</p>
+                </div>
+                <span class="font-mono text-[10px] text-dim border border-border rounded px-2 py-1" id="pollIndicator">
+                    sincronizado
+                </span>
+            </div>
+
+            <div id="messageList" class="flex-1 overflow-y-auto px-5 py-4 space-y-3"></div>
+
+            <form id="messageForm" class="border-t border-border p-3 flex gap-2">
+                <input id="messageInput" type="text" autocomplete="off"
+                    placeholder="Escreva uma mensagem..."
+                    class="flex-1 bg-surfacealt border border-border rounded-md px-3 py-2 text-sm text-ink placeholder-dim/50 focus:outline-none focus:ring-2 focus:ring-signal/40 focus:border-signal/60">
+                <button type="submit"
+                    class="bg-signal text-base font-semibold text-sm rounded-md px-4 hover:opacity-90 transition">
+                    Enviar
+                </button>
+            </form>
+        </div>
+    </section>
+</div>
+
+<!-- Modal: nova conversa -->
+<div id="newChatModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-10">
+    <div class="bg-surface border border-border rounded-lg p-6 w-full max-w-sm">
+        <h2 class="font-medium text-sm mb-1">Nova conversa</h2>
+        <p class="text-dim text-xs font-mono mb-4">1 destinatario = chat 1:1 &middot; 2+ = grupo</p>
+
+        <label class="block text-xs font-mono text-dim mb-1.5">ids dos destinatarios (separados por virgula)</label>
+        <input id="recipientIdsInput" type="text" placeholder="ex: 2 ou 2,3,4"
+            class="w-full bg-surfacealt border border-border rounded-md px-3 py-2 text-sm text-ink placeholder-dim/50 focus:outline-none focus:ring-2 focus:ring-signal/40 mb-3">
+
+        <label class="block text-xs font-mono text-dim mb-1.5">nome do grupo (opcional)</label>
+        <input id="chatNameInput" type="text" placeholder="ex: Trabalho SD"
+            class="w-full bg-surfacealt border border-border rounded-md px-3 py-2 text-sm text-ink placeholder-dim/50 focus:outline-none focus:ring-2 focus:ring-signal/40 mb-1">
+
+        <p id="modalError" class="text-alert text-xs font-mono mt-2 hidden"></p>
+
+        <div class="flex gap-2 mt-5">
+            <button id="cancelModalBtn" class="flex-1 border border-border rounded-md py-2 text-sm text-dim hover:text-ink transition">Cancelar</button>
+            <button id="confirmModalBtn" class="flex-1 bg-signal text-base font-semibold rounded-md py-2 text-sm hover:opacity-90 transition">Criar</button>
+        </div>
+        <p class="text-dim/60 text-[11px] font-mono mt-3">
+            dica: veja os ids de outros usuarios no /admin/ do Django
+        </p>
+    </div>
+</div>
+
+<script>
+const API = window.location.origin + '/api';
+const token = localStorage.getItem('lc_token');
+const currentUser = JSON.parse(localStorage.getItem('lc_user') || 'null');
+
+if (!token || !currentUser) {
+    window.location.href = '/login/';
+}
+
+document.getElementById('sessionStatus').textContent = 'conectado: ' + currentUser.username;
+document.getElementById('currentUserLabel').textContent = '@' + currentUser.username + ' · id ' + currentUser.id;
+
+function authHeaders(extra) {
+    return Object.assign({ 'Authorization': 'Token ' + token }, extra || {});
+}
+
+let chats = [];
+let activeChatId = null;
+let pollHandle = null;
+
+async function apiFetch(path, options) {
+    const response = await fetch(API + path, options);
+    if (response.status === 401) {
+        localStorage.removeItem('lc_token');
+        localStorage.removeItem('lc_user');
+        window.location.href = '/login/';
+        return null;
+    }
+    return response;
+}
+
+function chatDisplayName(chat) {
+    if (chat.name) return chat.name;
+    const others = chat.participants.filter(p => p.id !== currentUser.id);
+    return others.map(p => p.username).join(', ') || 'Conversa';
+}
+
+async function loadChats() {
+    const response = await apiFetch('/chats/', { headers: authHeaders() });
+    if (!response) return;
+    const data = await response.json();
+    chats = data.chats;
+    renderChatList();
+}
+
+function renderChatList() {
+    const listEl = document.getElementById('chatList');
+    if (chats.length === 0) {
+        listEl.innerHTML = '<p class="text-dim text-xs font-mono p-4">nenhuma conversa ainda</p>';
+        return;
+    }
+    listEl.innerHTML = '';
+    chats.forEach(chat => {
+        const item = document.createElement('button');
+        const isActive = chat.id === activeChatId;
+        item.className = 'w-full text-left px-4 py-3 border-b border-border/60 hover:bg-surfacealt transition ' + (isActive ? 'bg-surfacealt' : '');
+        item.innerHTML = `
+            <p class="text-sm font-medium truncate">${chatDisplayName(chat)}</p>
+            <p class="text-dim text-xs font-mono mt-0.5">${chat.isGroup ? 'grupo · ' + chat.participants.length + ' membros' : '1:1'}</p>
+        `;
+        item.addEventListener('click', () => openChat(chat.id));
+        listEl.appendChild(item);
+    });
+}
+
+async function openChat(chatId) {
+    activeChatId = chatId;
+    renderChatList();
+
+    const chat = chats.find(c => c.id === chatId);
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('activeChat').classList.remove('hidden');
+    document.getElementById('chatTitle').textContent = chatDisplayName(chat);
+    document.getElementById('chatSubtitle').textContent = chat.participants.map(p => '@' + p.username).join(' · ');
+
+    await loadMessages();
+
+    if (pollHandle) clearInterval(pollHandle);
+    pollHandle = setInterval(loadMessages, 3000);
+}
+
+async function loadMessages() {
+    if (!activeChatId) return;
+    const response = await apiFetch(`/chats/${activeChatId}/messages/`, { headers: authHeaders() });
+    if (!response) return;
+    const data = await response.json();
+    renderMessages(data.messages);
+}
+
+function renderMessages(messages) {
+    const listEl = document.getElementById('messageList');
+    const wasAtBottom = listEl.scrollTop + listEl.clientHeight >= listEl.scrollHeight - 40;
+
+    listEl.innerHTML = '';
+    messages.forEach(msg => {
+        const isMine = msg.senderId === currentUser.id;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex ' + (isMine ? 'justify-end' : 'justify-start');
+
+        const time = new Date(msg.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+        wrapper.innerHTML = `
+            <div class="max-w-[70%] ${isMine ? 'bg-signal/15 border-signal/30' : 'bg-surfacealt border-border'} border rounded-lg px-3.5 py-2">
+                ${!isMine ? `<p class="text-signal text-xs font-mono mb-0.5">${msg.senderUsername}</p>` : ''}
+                <p class="text-sm text-ink whitespace-pre-wrap break-words">${escapeHtml(msg.content)}</p>
+                <p class="text-dim text-[10px] font-mono mt-1">${time}</p>
+            </div>
+        `;
+        listEl.appendChild(wrapper);
+    });
+
+    if (wasAtBottom || messages.length <= 1) {
+        listEl.scrollTop = listEl.scrollHeight;
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+document.getElementById('messageForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const input = document.getElementById('messageInput');
+    const content = input.value.trim();
+    if (!content || !activeChatId) return;
+
+    input.value = '';
+    const response = await apiFetch(`/chats/${activeChatId}/messages/send/`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ content }),
+    });
+    if (response && response.ok) {
+        await loadMessages();
+    }
+});
+
+// Modal de nova conversa
+const modal = document.getElementById('newChatModal');
+document.getElementById('newChatBtn').addEventListener('click', () => {
+    document.getElementById('recipientIdsInput').value = '';
+    document.getElementById('chatNameInput').value = '';
+    document.getElementById('modalError').classList.add('hidden');
+    modal.classList.remove('hidden');
+});
+document.getElementById('cancelModalBtn').addEventListener('click', () => modal.classList.add('hidden'));
+
+document.getElementById('confirmModalBtn').addEventListener('click', async () => {
+    const errorEl = document.getElementById('modalError');
+    errorEl.classList.add('hidden');
+
+    const rawIds = document.getElementById('recipientIdsInput').value.trim();
+    const name = document.getElementById('chatNameInput').value.trim();
+    const recipientIds = rawIds.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+
+    if (recipientIds.length === 0) {
+        errorEl.textContent = 'Informe ao menos um id valido.';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    const response = await apiFetch('/chats/create/', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ recipientIds, name: name || null }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+        errorEl.textContent = data.error || 'Erro ao criar conversa.';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    modal.classList.add('hidden');
+    await loadChats();
+    openChat(data.id);
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem('lc_token');
+    localStorage.removeItem('lc_user');
+    window.location.href = '/login/';
+});
+
+loadChats();
+</script>
+{% endblock %}

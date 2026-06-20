@@ -3,46 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Chat CEFET{% endblock %}</title>
-    
-    <!-- Importando o Tailwind via CDN (A forma mais simples!) -->
-    <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    
-    <!-- Configuração básica de cores do Tailwind (opcional) -->
+    <title>{% block title %}Local Chat{% endblock %}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        brand: '#1E3A8A', // Azul escuro para o tema
+                        base: '#0B0E14',
+                        surface: '#141925',
+                        surfacealt: '#1A2030',
+                        border: '#232A3B',
+                        ink: '#E8EAED',
+                        dim: '#8B95A7',
+                        signal: '#5EEAD4',
+                        alert: '#F87171',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
                     }
                 }
             }
         }
     </script>
+    <style>
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.35; }
+        }
+        .pulse-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #232A3B; border-radius: 4px; }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen font-sans antialiased text-gray-900">
-    
-    <!-- Barra de Navegação (Aparece em todas as páginas que herdarem a base) -->
-    <nav class="bg-brand text-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="font-bold text-xl">💬 Sistemas Distribuídos - Chat</div>
-            <div class="text-sm">
-                <!-- Se o utilizador estiver logado, mostramos o nome e botão de sair -->
-                {% if user.is_authenticated %}
-                    Olá, <span class="font-semibold">{{ user.username }}</span>! 
-                    <a href="#" class="ml-4 hover:underline text-red-300">Sair</a>
-                {% else %}
-                    Não autenticado
-                {% endif %}
+<body class="bg-base min-h-screen font-sans antialiased text-ink">
+
+    <nav class="border-b border-border">
+        <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <span class="h-2 w-2 rounded-full bg-signal pulse-dot"></span>
+                <span class="font-mono text-xs tracking-wider text-dim uppercase">local-chat</span>
+                <span class="font-mono text-xs text-border">/</span>
+                <span class="font-mono text-xs text-dim">sd-2026.1</span>
+            </div>
+            <div class="font-mono text-xs text-dim" id="sessionStatus">
+                desconectado
             </div>
         </div>
     </nav>
 
-    <!-- Aqui é onde o conteúdo específico de cada página vai ser "injetado" -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="max-w-5xl mx-auto px-6 py-10">
         {% block content %}
-        <!-- O conteúdo do login ou do chat virá para aqui -->
         {% endblock %}
     </main>
 

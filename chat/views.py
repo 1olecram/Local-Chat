@@ -4,11 +4,33 @@ from functools import wraps
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.http import JsonResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from rest_framework.authtoken.models import Token
 
 from .models import Chat, Message
+
+
+# ---------------------------------------------------------------------------
+# Paginas (templates)
+# ---------------------------------------------------------------------------
+
+def LoginPageView(Request):
+    """
+    Serve a pagina de login/registro. A sessao real e controlada via
+    token no localStorage (JS), nao via sessao do Django, entao essa
+    view nao faz nenhuma checagem de autenticacao no backend.
+    """
+    return render(Request, "login.html")
+
+
+def ChatPageView(Request):
+    """
+    Serve a pagina principal do chat. O JS verifica se ha um token
+    salvo no localStorage e redireciona para /login/ caso nao haja.
+    """
+    return render(Request, "chat.html")
 
 
 # ---------------------------------------------------------------------------

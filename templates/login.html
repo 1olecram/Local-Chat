@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Entrar — Local Chat{% endblock %}
+
+{% block content %}
+<div class="max-w-sm mx-auto mt-10">
+
+    <div class="mb-8">
+        <h1 class="text-2xl font-semibold">Local Chat</h1>
+        <p class="text-dim text-sm mt-1 font-mono">autenticacao &middot; servico de usuario</p>
+    </div>
+
+    <div class="bg-surface border border-border rounded-lg p-6">
+
+        <div class="flex gap-1 mb-6 bg-surfacealt rounded-md p-1">
+            <button id="tabLogin" class="flex-1 py-1.5 rounded text-sm font-medium bg-base text-ink transition">Entrar</button>
+            <button id="tabRegister" class="flex-1 py-1.5 rounded text-sm font-medium text-dim transition">Criar conta</button>
+        </div>
+
+        <form id="authForm" class="space-y-4">
+            <div>
+                <label class="block text-xs font-mono text-dim mb-1.5" for="username">usuario</label>
+                <input id="username" type="text" autocomplete="username" required
+                    class="w-full bg-surfacealt border border-border rounded-md px-3 py-2 text-sm text-ink placeholder-dim/50 focus:outline-none focus:ring-2 focus:ring-signal/40 focus:border-signal/60"
+                    placeholder="ex: alice">
+            </div>
+            <div>
+                <label class="block text-xs font-mono text-dim mb-1.5" for="password">senha</label>
+                <input id="password" type="password" autocomplete="current-password" required
+                    class="w-full bg-surfacealt border border-border rounded-md px-3 py-2 text-sm text-ink placeholder-dim/50 focus:outline-none focus:ring-2 focus:ring-signal/40 focus:border-signal/60"
+                    placeholder="minimo 8 caracteres">
+            </div>
+
+            <button type="submit" id="submitBtn"
+                class="w-full bg-signal text-base font-semibold text-sm rounded-md py-2.5 hover:opacity-90 transition">
+                Entrar
+            </button>
+
+            <p id="formError" class="text-alert text-xs font-mono hidden"></p>
+        </form>
+    </div>
+
+    <p class="text-dim text-xs mt-4 font-mono text-center">
+        servico de autenticacao &middot; <span id="apiBase"></span>
+    </p>
+</div>
+
+<script>
+const API = window.location.origin + '/api';
+document.getElementById('apiBase').textContent = API;
+
+const tabLogin = document.getElementById('tabLogin');
+const tabRegister = document.getElementById('tabRegister');
+const submitBtn = document.getElementById('submitBtn');
+const form = document.getElementById('authForm');
+const errorEl = document.getElementById('formError');
+
+let mode = 'login';
+
+function setMode(newMode) {
+    mode = newMode;
+    const isLogin = mode === 'login';
+    tabLogin.className = isLogin
+        ? 'flex-1 py-1.5 rounded text-sm font-medium bg-base text-ink transition'
+        : 'flex-1 py-1.5 rounded text-sm font-medium text-dim transition';
+    tabRegister.className = !isLogin
+        ? 'flex-1 py-1.5 rounded text-sm font-medium bg-base text-ink transition'
+        : 'flex-1 py-1.5 rounded text-sm font-medium text-dim transition';
+    submitBtn.textContent = isLogin ? 'Entrar' : 'Criar conta';
+    errorEl.classList.add('hidden');
+}
+
+tabLogin.addEventListener('click', () => setMode('login'));
+tabRegister.addEventListener('click', () => setMode('register'));
+
+// Se já existe sessão salva, manda direto pro chat.
+if (localStorage.getItem('lc_token')) {
+    window.location.href = '/chat/';
+}
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    errorEl.classList.add('hidden');
+    submitBtn.disabled = true;
+    submitBtn.textContent = mode === 'login' ? 'Entrando...' : 'Criando...';
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const endpoint = mode === 'login' ? '/auth/login/' : '/auth/register/';
+
+    try {
+        const response = await fetch(API + endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            errorEl.textContent = data.error || 'Erro inesperado.';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        localStorage.setItem('lc_token', data.token);
+        localStorage.setItem('lc_user', JSON.stringify(data.user));
+        window.location.href = '/chat/';
+    } catch (err) {
+        errorEl.textContent = 'Nao foi possivel conectar ao servidor.';
+        errorEl.classList.remove('hidden');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = mode === 'login' ? 'Entrar' : 'Criar conta';
+    }
+});
+</script>
+{% endblock %}
