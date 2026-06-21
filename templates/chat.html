@@ -2,44 +2,39 @@
 {% block title %}Local Chat{% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-[280px_1fr] gap-5 h-[calc(100vh-160px)]">
+<div class="grid grid-cols-[300px_1fr] gap-4 h-[calc(100vh-150px)]">
 
-    <!-- Lista de conversas -->
-    <aside class="bg-surface border border-border rounded-lg flex flex-col overflow-hidden">
+    <aside class="bg-panel border border-border rounded-2xl flex flex-col overflow-hidden">
         <div class="p-4 border-b border-border flex items-center justify-between">
-            <span class="font-mono text-xs text-dim uppercase tracking-wider">conversas</span>
+            <span class="font-semibold text-sm">Conversas</span>
             <button id="newChatBtn" title="Nova conversa"
-                class="h-6 w-6 flex items-center justify-center rounded-md bg-surfacealt text-signal hover:bg-base transition text-sm leading-none">
+                class="h-8 w-8 flex items-center justify-center rounded-full bg-brandsoft text-brand hover:bg-brand hover:text-white transition text-lg leading-none">
                 +
             </button>
         </div>
         <div id="chatList" class="flex-1 overflow-y-auto">
-            <p class="text-dim text-xs font-mono p-4">carregando...</p>
+            <p class="text-sub text-sm p-4">Carregando...</p>
         </div>
         <div class="p-3 border-t border-border flex items-center justify-between">
-            <span class="font-mono text-xs text-dim" id="currentUserLabel">-</span>
-            <button id="logoutBtn" class="font-mono text-xs text-alert hover:underline">sair</button>
+            <span class="text-sm text-sub" id="currentUserLabel">-</span>
+            <button id="logoutBtn" class="text-sm text-red-500 hover:underline">Sair</button>
         </div>
     </aside>
 
-    <!-- Área de mensagens -->
-    <section class="bg-surface border border-border rounded-lg flex flex-col overflow-hidden">
+    <section class="bg-panel border border-border rounded-2xl flex flex-col overflow-hidden">
         <div id="emptyState" class="flex-1 flex items-center justify-center text-center px-6">
             <div>
-                <p class="text-dim font-mono text-sm">nenhuma conversa selecionada</p>
-                <p class="text-dim/70 text-xs mt-1">escolha uma conversa ou crie uma nova</p>
+                <p class="text-sub text-sm font-medium">Nenhuma conversa selecionada</p>
+                <p class="text-sub/70 text-sm mt-1">Escolha uma conversa ou inicie uma nova</p>
             </div>
         </div>
 
         <div id="activeChat" class="flex-1 flex flex-col hidden">
             <div class="px-5 py-3.5 border-b border-border flex items-center justify-between">
                 <div>
-                    <p id="chatTitle" class="font-medium text-sm">-</p>
-                    <p id="chatSubtitle" class="text-dim text-xs font-mono mt-0.5">-</p>
+                    <p id="chatTitle" class="font-semibold text-sm">-</p>
+                    <p id="chatSubtitle" class="text-sub text-xs mt-0.5">-</p>
                 </div>
-                <span class="font-mono text-[10px] text-dim border border-border rounded px-2 py-1" id="pollIndicator">
-                    sincronizado
-                </span>
             </div>
 
             <div id="messageList" class="flex-1 overflow-y-auto px-5 py-4 space-y-3"></div>
@@ -47,9 +42,9 @@
             <form id="messageForm" class="border-t border-border p-3 flex gap-2">
                 <input id="messageInput" type="text" autocomplete="off"
                     placeholder="Escreva uma mensagem..."
-                    class="flex-1 bg-surfacealt border border-border rounded-md px-3 py-2 text-sm text-ink placeholder-dim/50 focus:outline-none focus:ring-2 focus:ring-signal/40 focus:border-signal/60">
+                    class="flex-1 bg-bg border border-border rounded-xl px-4 py-2.5 text-sm text-ink placeholder-sub/60 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand">
                 <button type="submit"
-                    class="bg-signal text-base font-semibold text-sm rounded-md px-4 hover:opacity-90 transition">
+                    class="bg-brand text-white font-medium text-sm rounded-xl px-5 hover:opacity-90 transition">
                     Enviar
                 </button>
             </form>
@@ -57,29 +52,30 @@
     </section>
 </div>
 
-<!-- Modal: nova conversa -->
-<div id="newChatModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-10">
-    <div class="bg-surface border border-border rounded-lg p-6 w-full max-w-sm">
-        <h2 class="font-medium text-sm mb-1">Nova conversa</h2>
-        <p class="text-dim text-xs font-mono mb-4">1 destinatario = chat 1:1 &middot; 2+ = grupo</p>
-
-        <label class="block text-xs font-mono text-dim mb-1.5">ids dos destinatarios (separados por virgula)</label>
-        <input id="recipientIdsInput" type="text" placeholder="ex: 2 ou 2,3,4"
-            class="w-full bg-surfacealt border border-border rounded-md px-3 py-2 text-sm text-ink placeholder-dim/50 focus:outline-none focus:ring-2 focus:ring-signal/40 mb-3">
-
-        <label class="block text-xs font-mono text-dim mb-1.5">nome do grupo (opcional)</label>
-        <input id="chatNameInput" type="text" placeholder="ex: Trabalho SD"
-            class="w-full bg-surfacealt border border-border rounded-md px-3 py-2 text-sm text-ink placeholder-dim/50 focus:outline-none focus:ring-2 focus:ring-signal/40 mb-1">
-
-        <p id="modalError" class="text-alert text-xs font-mono mt-2 hidden"></p>
-
-        <div class="flex gap-2 mt-5">
-            <button id="cancelModalBtn" class="flex-1 border border-border rounded-md py-2 text-sm text-dim hover:text-ink transition">Cancelar</button>
-            <button id="confirmModalBtn" class="flex-1 bg-signal text-base font-semibold rounded-md py-2 text-sm hover:opacity-90 transition">Criar</button>
+<div id="newChatModal" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center p-6 z-10">
+    <div class="bg-panel border border-border rounded-2xl p-5 w-full max-w-sm shadow-lg">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="font-semibold text-sm">Nova conversa</h2>
+            <button id="closeModalBtn" class="text-sub hover:text-ink text-lg leading-none">&times;</button>
         </div>
-        <p class="text-dim/60 text-[11px] font-mono mt-3">
-            dica: veja os ids de outros usuarios no /admin/ do Django
-        </p>
+
+        <input id="userSearchInput" type="text" placeholder="Buscar por nome de usuário..."
+            class="w-full bg-bg border border-border rounded-xl px-3.5 py-2.5 text-sm text-ink placeholder-sub/60 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand mb-3">
+
+        <div id="selectedUsersBar" class="flex flex-wrap gap-1.5 mb-3 hidden"></div>
+
+        <div id="userResultsList" class="max-h-56 overflow-y-auto border border-border rounded-xl divide-y divide-border"></div>
+
+        <input id="chatNameInput" type="text" placeholder="Nome do grupo (opcional, se 2+ pessoas)"
+            class="w-full bg-bg border border-border rounded-xl px-3.5 py-2.5 text-sm text-ink placeholder-sub/60 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand mt-3 hidden"
+            id="chatNameInput">
+
+        <p id="modalError" class="text-red-500 text-xs mt-2 hidden"></p>
+
+        <button id="confirmModalBtn" disabled
+            class="w-full bg-brand text-white font-medium rounded-xl py-2.5 text-sm mt-4 hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed">
+            Iniciar conversa
+        </button>
     </div>
 </div>
 
@@ -92,8 +88,8 @@ if (!token || !currentUser) {
     window.location.href = '/login/';
 }
 
-document.getElementById('sessionStatus').textContent = 'conectado: ' + currentUser.username;
-document.getElementById('currentUserLabel').textContent = '@' + currentUser.username + ' · id ' + currentUser.id;
+document.getElementById('sessionStatus').textContent = currentUser.username;
+document.getElementById('currentUserLabel').textContent = '@' + currentUser.username;
 
 function authHeaders(extra) {
     return Object.assign({ 'Authorization': 'Token ' + token }, extra || {});
@@ -102,6 +98,8 @@ function authHeaders(extra) {
 let chats = [];
 let activeChatId = null;
 let pollHandle = null;
+let selectedUsers = [];
+let searchDebounce = null;
 
 async function apiFetch(path, options) {
     const response = await fetch(API + path, options);
@@ -131,17 +129,21 @@ async function loadChats() {
 function renderChatList() {
     const listEl = document.getElementById('chatList');
     if (chats.length === 0) {
-        listEl.innerHTML = '<p class="text-dim text-xs font-mono p-4">nenhuma conversa ainda</p>';
+        listEl.innerHTML = '<p class="text-sub text-sm p-4">Nenhuma conversa ainda</p>';
         return;
     }
     listEl.innerHTML = '';
     chats.forEach(chat => {
         const item = document.createElement('button');
         const isActive = chat.id === activeChatId;
-        item.className = 'w-full text-left px-4 py-3 border-b border-border/60 hover:bg-surfacealt transition ' + (isActive ? 'bg-surfacealt' : '');
+        item.className = 'w-full text-left px-4 py-3 border-b border-border/60 hover:bg-bg transition flex items-center gap-3 ' + (isActive ? 'bg-brandsoft' : '');
+        const initial = chatDisplayName(chat).charAt(0).toUpperCase();
         item.innerHTML = `
-            <p class="text-sm font-medium truncate">${chatDisplayName(chat)}</p>
-            <p class="text-dim text-xs font-mono mt-0.5">${chat.isGroup ? 'grupo · ' + chat.participants.length + ' membros' : '1:1'}</p>
+            <div class="h-9 w-9 rounded-full bg-brand text-white flex items-center justify-center text-sm font-semibold shrink-0">${initial}</div>
+            <div class="overflow-hidden">
+                <p class="text-sm font-medium truncate">${chatDisplayName(chat)}</p>
+                <p class="text-sub text-xs mt-0.5">${chat.isGroup ? chat.participants.length + ' participantes' : 'Conversa privada'}</p>
+            </div>
         `;
         item.addEventListener('click', () => openChat(chat.id));
         listEl.appendChild(item);
@@ -156,7 +158,7 @@ async function openChat(chatId) {
     document.getElementById('emptyState').classList.add('hidden');
     document.getElementById('activeChat').classList.remove('hidden');
     document.getElementById('chatTitle').textContent = chatDisplayName(chat);
-    document.getElementById('chatSubtitle').textContent = chat.participants.map(p => '@' + p.username).join(' · ');
+    document.getElementById('chatSubtitle').textContent = chat.participants.map(p => '@' + p.username).join(', ');
 
     await loadMessages();
 
@@ -185,10 +187,10 @@ function renderMessages(messages) {
         const time = new Date(msg.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
         wrapper.innerHTML = `
-            <div class="max-w-[70%] ${isMine ? 'bg-signal/15 border-signal/30' : 'bg-surfacealt border-border'} border rounded-lg px-3.5 py-2">
-                ${!isMine ? `<p class="text-signal text-xs font-mono mb-0.5">${msg.senderUsername}</p>` : ''}
-                <p class="text-sm text-ink whitespace-pre-wrap break-words">${escapeHtml(msg.content)}</p>
-                <p class="text-dim text-[10px] font-mono mt-1">${time}</p>
+            <div class="max-w-[70%] ${isMine ? 'bg-brand text-white' : 'bg-bubble text-ink'} rounded-2xl px-4 py-2.5">
+                ${!isMine ? `<p class="text-brand text-xs font-medium mb-0.5">${msg.senderUsername}</p>` : ''}
+                <p class="text-sm whitespace-pre-wrap break-words">${escapeHtml(msg.content)}</p>
+                <p class="${isMine ? 'text-white/70' : 'text-sub'} text-[11px] mt-1">${time}</p>
             </div>
         `;
         listEl.appendChild(wrapper);
@@ -222,29 +224,111 @@ document.getElementById('messageForm').addEventListener('submit', async (event) 
     }
 });
 
-// Modal de nova conversa
 const modal = document.getElementById('newChatModal');
-document.getElementById('newChatBtn').addEventListener('click', () => {
-    document.getElementById('recipientIdsInput').value = '';
-    document.getElementById('chatNameInput').value = '';
-    document.getElementById('modalError').classList.add('hidden');
-    modal.classList.remove('hidden');
-});
-document.getElementById('cancelModalBtn').addEventListener('click', () => modal.classList.add('hidden'));
+const userSearchInput = document.getElementById('userSearchInput');
+const userResultsList = document.getElementById('userResultsList');
+const selectedUsersBar = document.getElementById('selectedUsersBar');
+const chatNameInput = document.getElementById('chatNameInput');
+const confirmModalBtn = document.getElementById('confirmModalBtn');
 
-document.getElementById('confirmModalBtn').addEventListener('click', async () => {
+function openModal() {
+    selectedUsers = [];
+    userSearchInput.value = '';
+    document.getElementById('modalError').classList.add('hidden');
+    chatNameInput.value = '';
+    chatNameInput.classList.add('hidden');
+    confirmModalBtn.disabled = true;
+    renderSelectedUsers();
+    loadAllUsers();
+    modal.classList.remove('hidden');
+}
+
+document.getElementById('newChatBtn').addEventListener('click', openModal);
+document.getElementById('closeModalBtn').addEventListener('click', () => modal.classList.add('hidden'));
+
+async function loadAllUsers() {
+    const response = await apiFetch('/users/', { headers: authHeaders() });
+    if (!response) return;
+    const data = await response.json();
+    renderUserResults(data.users);
+}
+
+async function searchUsers(query) {
+    if (!query) {
+        loadAllUsers();
+        return;
+    }
+    const response = await apiFetch(`/users/search/?q=${encodeURIComponent(query)}`, { headers: authHeaders() });
+    if (!response) return;
+    const data = await response.json();
+    renderUserResults(data.users);
+}
+
+userSearchInput.addEventListener('input', () => {
+    clearTimeout(searchDebounce);
+    const query = userSearchInput.value.trim();
+    searchDebounce = setTimeout(() => searchUsers(query), 250);
+});
+
+function renderUserResults(users) {
+    const availableUsers = users.filter(u => !selectedUsers.some(s => s.id === u.id));
+    if (availableUsers.length === 0) {
+        userResultsList.innerHTML = '<p class="text-sub text-sm p-3">Nenhum usuário encontrado</p>';
+        return;
+    }
+    userResultsList.innerHTML = '';
+    availableUsers.forEach(user => {
+        const item = document.createElement('button');
+        item.className = 'w-full text-left px-3 py-2.5 hover:bg-bg transition flex items-center gap-2.5';
+        item.innerHTML = `
+            <div class="h-7 w-7 rounded-full bg-brand text-white flex items-center justify-center text-xs font-semibold">${user.username.charAt(0).toUpperCase()}</div>
+            <span class="text-sm">${user.username}</span>
+        `;
+        item.addEventListener('click', () => selectUser(user));
+        userResultsList.appendChild(item);
+    });
+}
+
+function selectUser(user) {
+    selectedUsers.push(user);
+    userSearchInput.value = '';
+    renderSelectedUsers();
+    loadAllUsers();
+    confirmModalBtn.disabled = selectedUsers.length === 0;
+    chatNameInput.classList.toggle('hidden', selectedUsers.length < 2);
+}
+
+function removeUser(userId) {
+    selectedUsers = selectedUsers.filter(u => u.id !== userId);
+    renderSelectedUsers();
+    loadAllUsers();
+    confirmModalBtn.disabled = selectedUsers.length === 0;
+    chatNameInput.classList.toggle('hidden', selectedUsers.length < 2);
+}
+
+function renderSelectedUsers() {
+    if (selectedUsers.length === 0) {
+        selectedUsersBar.classList.add('hidden');
+        selectedUsersBar.innerHTML = '';
+        return;
+    }
+    selectedUsersBar.classList.remove('hidden');
+    selectedUsersBar.innerHTML = '';
+    selectedUsers.forEach(user => {
+        const chip = document.createElement('span');
+        chip.className = 'inline-flex items-center gap-1.5 bg-brandsoft text-brand text-xs font-medium rounded-full px-3 py-1';
+        chip.innerHTML = `${user.username} <button class="hover:text-red-500">&times;</button>`;
+        chip.querySelector('button').addEventListener('click', () => removeUser(user.id));
+        selectedUsersBar.appendChild(chip);
+    });
+}
+
+confirmModalBtn.addEventListener('click', async () => {
     const errorEl = document.getElementById('modalError');
     errorEl.classList.add('hidden');
 
-    const rawIds = document.getElementById('recipientIdsInput').value.trim();
-    const name = document.getElementById('chatNameInput').value.trim();
-    const recipientIds = rawIds.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
-
-    if (recipientIds.length === 0) {
-        errorEl.textContent = 'Informe ao menos um id valido.';
-        errorEl.classList.remove('hidden');
-        return;
-    }
+    const recipientIds = selectedUsers.map(u => u.id);
+    const name = chatNameInput.value.trim();
 
     const response = await apiFetch('/chats/create/', {
         method: 'POST',

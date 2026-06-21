@@ -12,37 +12,15 @@ from rest_framework.authtoken.models import Token
 from .models import Chat, Message
 
 
-# ---------------------------------------------------------------------------
-# Paginas (templates)
-# ---------------------------------------------------------------------------
-
 def LoginPageView(Request):
-    """
-    Serve a pagina de login/registro. A sessao real e controlada via
-    token no localStorage (JS), nao via sessao do Django, entao essa
-    view nao faz nenhuma checagem de autenticacao no backend.
-    """
     return render(Request, "login.html")
 
 
 def ChatPageView(Request):
-    """
-    Serve a pagina principal do chat. O JS verifica se ha um token
-    salvo no localStorage e redireciona para /login/ caso nao haja.
-    """
     return render(Request, "chat.html")
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def ParseJsonBody(Request):
-    """
-    Le o corpo da requisicao como JSON. Retorna um dict vazio se o body
-    estiver vazio ou nao for um JSON valido (mantem a logica simples,
-    sem levantar exception pro caller tratar).
-    """
     try:
         return json.loads(Request.body or "{}")
     except json.JSONDecodeError:
@@ -50,11 +28,6 @@ def ParseJsonBody(Request):
 
 
 def GetUserFromToken(Request):
-    """
-    Extrai e valida o token enviado no header Authorization no formato:
-    "Authorization: Token <chave>". Retorna o User correspondente ou
-    None se o token for invalido/ausente.
-    """
     AuthHeader = Request.headers.get("Authorization", "")
     Parts = AuthHeader.split()
     if len(Parts) != 2 or Parts[0] != "Token":
@@ -70,10 +43,6 @@ def GetUserFromToken(Request):
 
 
 def LoginRequired(ViewFunction):
-    """
-    Decorator que exige um token valido no header Authorization.
-    Se valido, injeta o usuario autenticado como Request.AuthUser.
-    """
 
     @wraps(ViewFunction)
     def Wrapper(Request, *Args, **Kwargs):
@@ -120,16 +89,9 @@ def SerializeChat(ChatObject):
     }
 
 
-# ---------------------------------------------------------------------------
-# Autenticacao / Usuario
-# ---------------------------------------------------------------------------
-
 @csrf_exempt
 @require_http_methods(["POST"])
 def RegisterView(Request):
-    """
-    Cria um novo usuario. Espera JSON: { "username": ..., "password": ... }
-    """
     Body = ParseJsonBody(Request)
     Username = Body.get("username", "").strip()
     Password = Body.get("password", "")
@@ -161,11 +123,6 @@ def RegisterView(Request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def LoginView(Request):
-    """
-    Autentica um usuario existente. Espera JSON:
-    { "username": ..., "password": ... }
-    Retorna o token a ser usado no header Authorization das demais rotas.
-    """
     Body = ParseJsonBody(Request)
     Username = Body.get("username", "").strip()
     Password = Body.get("password", "")
@@ -190,22 +147,40 @@ def LoginView(Request):
     )
 
 
-# ---------------------------------------------------------------------------
-# Chats / Mensagens
-# ---------------------------------------------------------------------------
+@csrf_exempt
+@require_http_methods(["GET"])
+@LoginRequired
+def ListUsersView(Request):
+    AllUsers = User.objects.exclude(id=Request.AuthUser.id).order_by("username")
+    return JsonResponse(
+        {"users": [SerializeUser(UserItem) for UserItem in AllUsers]},
+        status=200,
+    )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@LoginRequired
+def SearchUsersView(Request):
+    Query = Request.GET.get("q", "").strip()
+    if not Query:
+        return JsonResponse({"users": []}, status=200)
+
+    MatchingUsers = (
+        User.objects.filter(username__icontains=Query)
+        .exclude(id=Request.AuthUser.id)
+        .order_by("username")[:20]
+    )
+    return JsonResponse(
+        {"users": [SerializeUser(UserItem) for UserItem in MatchingUsers]},
+        status=200,
+    )
+
 
 @csrf_exempt
 @require_http_methods(["POST"])
 @LoginRequired
 def CreateChatView(Request):
-    """
-    Cria um chat novo entre o usuario autenticado e um ou mais
-    destinatarios, cobrindo tanto 1:1 quanto 1:N.
-
-    Espera JSON: { "recipientIds": [2, 3, ...], "name": "opcional" }
-    Se "recipientIds" tiver 1 elemento -> chat 1:1.
-    Se tiver mais de 1 -> chat em grupo (1:N).
-    """
     Body = ParseJsonBody(Request)
     RecipientIds = Body.get("recipientIds", [])
     Name = Body.get("name")
@@ -239,9 +214,6 @@ def CreateChatView(Request):
 @require_http_methods(["GET"])
 @LoginRequired
 def ListChatsView(Request):
-    """
-    Lista todos os chats em que o usuario autenticado participa.
-    """
     UserChats = Chat.objects.filter(Participants=Request.AuthUser).order_by(
         "-CreatedAt"
     )
@@ -255,13 +227,6 @@ def ListChatsView(Request):
 @require_http_methods(["POST"])
 @LoginRequired
 def SendMessageView(Request, ChatId):
-    """
-    Envia uma mensagem para um chat existente (1:1 ou 1:N, a logica e
-    a mesma: a mensagem fica associada ao Chat e visivel a todos os
-    Participants).
-
-    Espera JSON: { "content": "texto da mensagem" }
-    """
     try:
         TargetChat = Chat.objects.get(id=ChatId, Participants=Request.AuthUser)
     except Chat.DoesNotExist:
@@ -291,10 +256,6 @@ def SendMessageView(Request, ChatId):
 @require_http_methods(["GET"])
 @LoginRequired
 def MessageHistoryView(Request, ChatId):
-    """
-    Retorna o historico de mensagens de um chat especifico, em ordem
-    cronologica. Apenas participantes do chat podem ver o historico.
-    """
     try:
         TargetChat = Chat.objects.get(id=ChatId, Participants=Request.AuthUser)
     except Chat.DoesNotExist:

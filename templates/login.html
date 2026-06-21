@@ -2,51 +2,47 @@
 {% block title %}Entrar — Local Chat{% endblock %}
 
 {% block content %}
-<div class="max-w-sm mx-auto mt-10">
+<div class="max-w-sm mx-auto mt-12">
 
-    <div class="mb-8">
-        <h1 class="text-2xl font-semibold">Local Chat</h1>
-        <p class="text-dim text-sm mt-1 font-mono">autenticacao &middot; servico de usuario</p>
+    <div class="mb-8 text-center">
+        <div class="h-12 w-12 rounded-2xl bg-brand mx-auto flex items-center justify-center text-white text-xl font-semibold mb-3">L</div>
+        <h1 class="text-xl font-semibold">Bem-vindo ao Local Chat</h1>
+        <p class="text-sub text-sm mt-1">Entre ou crie uma conta para começar</p>
     </div>
 
-    <div class="bg-surface border border-border rounded-lg p-6">
+    <div class="bg-panel border border-border rounded-2xl p-6 shadow-sm">
 
-        <div class="flex gap-1 mb-6 bg-surfacealt rounded-md p-1">
-            <button id="tabLogin" class="flex-1 py-1.5 rounded text-sm font-medium bg-base text-ink transition">Entrar</button>
-            <button id="tabRegister" class="flex-1 py-1.5 rounded text-sm font-medium text-dim transition">Criar conta</button>
+        <div class="flex gap-1 mb-6 bg-bg rounded-xl p-1">
+            <button id="tabLogin" class="flex-1 py-2 rounded-lg text-sm font-medium bg-panel text-ink shadow-sm transition">Entrar</button>
+            <button id="tabRegister" class="flex-1 py-2 rounded-lg text-sm font-medium text-sub transition">Criar conta</button>
         </div>
 
         <form id="authForm" class="space-y-4">
             <div>
-                <label class="block text-xs font-mono text-dim mb-1.5" for="username">usuario</label>
+                <label class="block text-xs font-medium text-sub mb-1.5" for="username">Nome de usuário</label>
                 <input id="username" type="text" autocomplete="username" required
-                    class="w-full bg-surfacealt border border-border rounded-md px-3 py-2 text-sm text-ink placeholder-dim/50 focus:outline-none focus:ring-2 focus:ring-signal/40 focus:border-signal/60"
+                    class="w-full bg-bg border border-border rounded-xl px-3.5 py-2.5 text-sm text-ink placeholder-sub/60 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
                     placeholder="ex: alice">
             </div>
             <div>
-                <label class="block text-xs font-mono text-dim mb-1.5" for="password">senha</label>
+                <label class="block text-xs font-medium text-sub mb-1.5" for="password">Senha</label>
                 <input id="password" type="password" autocomplete="current-password" required
-                    class="w-full bg-surfacealt border border-border rounded-md px-3 py-2 text-sm text-ink placeholder-dim/50 focus:outline-none focus:ring-2 focus:ring-signal/40 focus:border-signal/60"
-                    placeholder="minimo 8 caracteres">
+                    class="w-full bg-bg border border-border rounded-xl px-3.5 py-2.5 text-sm text-ink placeholder-sub/60 focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+                    placeholder="mínimo 8 caracteres">
             </div>
 
             <button type="submit" id="submitBtn"
-                class="w-full bg-signal text-base font-semibold text-sm rounded-md py-2.5 hover:opacity-90 transition">
+                class="w-full bg-brand text-white font-medium text-sm rounded-xl py-2.5 hover:opacity-90 transition">
                 Entrar
             </button>
 
-            <p id="formError" class="text-alert text-xs font-mono hidden"></p>
+            <p id="formError" class="text-red-500 text-xs hidden"></p>
         </form>
     </div>
-
-    <p class="text-dim text-xs mt-4 font-mono text-center">
-        servico de autenticacao &middot; <span id="apiBase"></span>
-    </p>
 </div>
 
 <script>
 const API = window.location.origin + '/api';
-document.getElementById('apiBase').textContent = API;
 
 const tabLogin = document.getElementById('tabLogin');
 const tabRegister = document.getElementById('tabRegister');
@@ -60,11 +56,11 @@ function setMode(newMode) {
     mode = newMode;
     const isLogin = mode === 'login';
     tabLogin.className = isLogin
-        ? 'flex-1 py-1.5 rounded text-sm font-medium bg-base text-ink transition'
-        : 'flex-1 py-1.5 rounded text-sm font-medium text-dim transition';
+        ? 'flex-1 py-2 rounded-lg text-sm font-medium bg-panel text-ink shadow-sm transition'
+        : 'flex-1 py-2 rounded-lg text-sm font-medium text-sub transition';
     tabRegister.className = !isLogin
-        ? 'flex-1 py-1.5 rounded text-sm font-medium bg-base text-ink transition'
-        : 'flex-1 py-1.5 rounded text-sm font-medium text-dim transition';
+        ? 'flex-1 py-2 rounded-lg text-sm font-medium bg-panel text-ink shadow-sm transition'
+        : 'flex-1 py-2 rounded-lg text-sm font-medium text-sub transition';
     submitBtn.textContent = isLogin ? 'Entrar' : 'Criar conta';
     errorEl.classList.add('hidden');
 }
@@ -72,7 +68,6 @@ function setMode(newMode) {
 tabLogin.addEventListener('click', () => setMode('login'));
 tabRegister.addEventListener('click', () => setMode('register'));
 
-// Se já existe sessão salva, manda direto pro chat.
 if (localStorage.getItem('lc_token')) {
     window.location.href = '/chat/';
 }
@@ -105,7 +100,7 @@ form.addEventListener('submit', async (event) => {
         localStorage.setItem('lc_user', JSON.stringify(data.user));
         window.location.href = '/chat/';
     } catch (err) {
-        errorEl.textContent = 'Nao foi possivel conectar ao servidor.';
+        errorEl.textContent = 'Não foi possível conectar ao servidor.';
         errorEl.classList.remove('hidden');
     } finally {
         submitBtn.disabled = false;

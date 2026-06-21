@@ -7,58 +7,50 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        base: '#0B0E14',
-                        surface: '#141925',
-                        surfacealt: '#1A2030',
-                        border: '#232A3B',
-                        ink: '#E8EAED',
-                        dim: '#8B95A7',
-                        signal: '#5EEAD4',
-                        alert: '#F87171',
+                        bg: '#F4F5F7',
+                        panel: '#FFFFFF',
+                        border: '#E4E7EC',
+                        ink: '#1F2430',
+                        sub: '#6B7280',
+                        brand: '#4F6BFF',
+                        brandsoft: '#EEF1FF',
+                        bubble: '#F0F2F6',
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
-                        mono: ['JetBrains Mono', 'monospace'],
                     }
                 }
             }
         }
     </script>
     <style>
-        @keyframes pulse-dot {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.35; }
-        }
-        .pulse-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #232A3B; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #E4E7EC; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-base min-h-screen font-sans antialiased text-ink">
+<body class="bg-bg min-h-screen font-sans antialiased text-ink">
 
-    <nav class="border-b border-border">
+    <nav class="border-b border-border bg-panel">
         <div class="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
-            <div class="flex items-center gap-2.5">
-                <span class="h-2 w-2 rounded-full bg-signal pulse-dot"></span>
-                <span class="font-mono text-xs tracking-wider text-dim uppercase">local-chat</span>
-                <span class="font-mono text-xs text-border">/</span>
-                <span class="font-mono text-xs text-dim">sd-2026.1</span>
+            <div class="flex items-center gap-2">
+                <div class="h-7 w-7 rounded-lg bg-brand flex items-center justify-center text-white text-sm font-semibold">L</div>
+                <span class="font-semibold text-sm">Local Chat</span>
             </div>
-            <div class="font-mono text-xs text-dim" id="sessionStatus">
+            <div class="text-sm text-sub" id="sessionStatus">
                 desconectado
             </div>
         </div>
     </nav>
 
-    <main class="max-w-5xl mx-auto px-6 py-10">
+    <main class="max-w-5xl mx-auto px-6 py-8">
         {% block content %}
         {% endblock %}
     </main>
