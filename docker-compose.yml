@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: local_chat_db
+    restart: always
+    environment:
+      POSTGRES_DB: local_chat
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "916810"
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
