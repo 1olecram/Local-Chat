@@ -97,9 +97,23 @@ function authHeaders(extra) {
 
 let chats = [];
 let activeChatId = null;
-let pollHandle = null;
+let chatSocket = null;
+let activeChatMessages = [];
 let selectedUsers = [];
 let searchDebounce = null;
+
+function stringToColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const colors = [
+        '#4F6BFF', '#22C55E', '#EAB308', '#EC4899', '#3B82F6', 
+        '#A855F7', '#F97316', '#EF4444', '#14B8A6', '#06B6D4'
+    ];
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+}
 
 async function apiFetch(path, options) {
     const response = await fetch(API + path, options);
@@ -137,11 +151,14 @@ function renderChatList() {
         const item = document.createElement('button');
         const isActive = chat.id === activeChatId;
         item.className = 'w-full text-left px-4 py-3 border-b border-border/60 hover:bg-bg transition flex items-center gap-3 ' + (isActive ? 'bg-brandsoft' : '');
-        const initial = chatDisplayName(chat).charAt(0).toUpperCase();
+        
+        const displayName = chatDisplayName(chat);
+        const color = stringToColor(displayName);
+        const initial = displayName.charAt(0).toUpperCase();
         item.innerHTML = `
-            <div class="h-9 w-9 rounded-full bg-brand text-white flex items-center justify-center text-sm font-semibold shrink-0">${initial}</div>
+            <div class="h-9 w-9 rounded-full text-white flex items-center justify-center text-sm font-semibold shrink-0" style="background-color: ${color}">${initial}</div>
             <div class="overflow-hidden">
-                <p class="text-sm font-medium truncate">${chatDisplayName(chat)}</p>
+                <p class="text-sm font-medium truncate">${displayName}</p>
                 <p class="text-sub text-xs mt-0.5">${chat.isGroup ? chat.participants.length + ' participantes' : 'Conversa privada'}</p>
             </div>
         `;
@@ -162,8 +179,33 @@ async function openChat(chatId) {
 
     await loadMessages();
 
-    if (pollHandle) clearInterval(pollHandle);
-    pollHandle = setInterval(loadMessages, 3000);
+    if (chatSocket) {
+        chatSocket.close();
+    }
+
+    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = `${wsScheme}://${window.location.host}/ws/chat/${chatId}/?token=${token}`;
+    
+    chatSocket = new WebSocket(wsUrl);
+
+    chatSocket.onmessage = function(e) {
+        try {
+            const data = JSON.parse(e.data);
+            if (data.type === 'chat_message') {
+                appendMessage(data.message);
+            }
+        } catch (err) {
+            console.error("Erro ao processar mensagem WebSocket:", err);
+        }
+    };
+
+    chatSocket.onclose = function(e) {
+        console.log('Conexão WebSocket fechada para chat:', chatId);
+    };
+
+    chatSocket.onerror = function(err) {
+        console.error('Erro na conexão WebSocket:', err);
+    };
 }
 
 async function loadMessages() {
@@ -171,7 +213,8 @@ async function loadMessages() {
     const response = await apiFetch(`/chats/${activeChatId}/messages/`, { headers: authHeaders() });
     if (!response) return;
     const data = await response.json();
-    renderMessages(data.messages);
+    activeChatMessages = data.messages;
+    renderMessages(activeChatMessages);
 }
 
 function renderMessages(messages) {
@@ -201,26 +244,30 @@ function renderMessages(messages) {
     }
 }
 
+function appendMessage(msg) {
+    if (msg.chatId !== activeChatId) return;
+    if (activeChatMessages.some(m => m.id === msg.id)) return;
+    activeChatMessages.push(msg);
+    renderMessages(activeChatMessages);
+}
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-document.getElementById('messageForm').addEventListener('submit', async (event) => {
+document.getElementById('messageForm').addEventListener('submit', (event) => {
     event.preventDefault();
     const input = document.getElementById('messageInput');
     const content = input.value.trim();
     if (!content || !activeChatId) return;
 
-    input.value = '';
-    const response = await apiFetch(`/chats/${activeChatId}/messages/send/`, {
-        method: 'POST',
-        headers: authHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify({ content }),
-    });
-    if (response && response.ok) {
-        await loadMessages();
+    if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+        chatSocket.send(JSON.stringify({ content: content }));
+        input.value = '';
+    } else {
+        console.error("Conexão WebSocket não está ativa.");
     }
 });
 
@@ -280,8 +327,9 @@ function renderUserResults(users) {
     availableUsers.forEach(user => {
         const item = document.createElement('button');
         item.className = 'w-full text-left px-3 py-2.5 hover:bg-bg transition flex items-center gap-2.5';
+        const color = stringToColor(user.username);
         item.innerHTML = `
-            <div class="h-7 w-7 rounded-full bg-brand text-white flex items-center justify-center text-xs font-semibold">${user.username.charAt(0).toUpperCase()}</div>
+            <div class="h-7 w-7 rounded-full text-white flex items-center justify-center text-xs font-semibold" style="background-color: ${color}">${user.username.charAt(0).toUpperCase()}</div>
             <span class="text-sm">${user.username}</span>
         `;
         item.addEventListener('click', () => selectUser(user));
