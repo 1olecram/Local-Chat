@@ -207,15 +207,33 @@ def CreateChatView(Request):
     )
     NewChat.Participants.add(Request.AuthUser, *Recipients)
 
-    return JsonResponse(SerializeChat(NewChat), status=201)
+    # Notificar participantes em tempo real via Channels
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+
+    channel_layer = get_channel_layer()
+    chat_data = SerializeChat(NewChat)
+    
+    for participant in NewChat.Participants.all():
+        async_to_sync(channel_layer.group_send)(
+            f'user_{participant.id}',
+            {
+                'type': 'chat_created',
+                'chat': chat_data
+            }
+        )
+
+    return JsonResponse(chat_data, status=201)
 
 
 @csrf_exempt
 @require_http_methods(["GET"])
 @LoginRequired
 def ListChatsView(Request):
-    UserChats = Chat.objects.filter(Participants=Request.AuthUser).order_by(
-        "-CreatedAt"
+    UserChats = (
+        Chat.objects.filter(Participants=Request.AuthUser)
+        .prefetch_related("Participants")
+        .order_by("-CreatedAt")
     )
     return JsonResponse(
         {"chats": [SerializeChat(ChatItem) for ChatItem in UserChats]},

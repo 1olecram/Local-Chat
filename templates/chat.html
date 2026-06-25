@@ -109,6 +109,39 @@ let activeChatMessages = [];
 let selectedUsers = [];
 let searchDebounce = null;
 
+function connectWebSocket() {
+    if (!token) return;
+    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsUrl = `${wsScheme}://${window.location.host}/ws/chat/?token=${token}`;
+    
+    chatSocket = new WebSocket(wsUrl);
+
+    chatSocket.onmessage = function(e) {
+        try {
+            const data = JSON.parse(e.data);
+            if (data.type === 'chat_message') {
+                if (data.message.chatId === activeChatId) {
+                    appendMessage(data.message);
+                }
+                loadChats();
+            } else if (data.type === 'chat_created') {
+                loadChats();
+            }
+        } catch (err) {
+            console.error("Erro ao processar mensagem WebSocket:", err);
+        }
+    };
+
+    chatSocket.onclose = function(e) {
+        console.log('Conexão WebSocket global fechada. Reconectando em 3s...');
+        setTimeout(connectWebSocket, 3000);
+    };
+
+    chatSocket.onerror = function(err) {
+        console.error('Erro no WebSocket global:', err);
+    };
+}
+
 function stringToColor(str) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
@@ -195,34 +228,6 @@ async function openChat(chatId) {
     document.getElementById('chatSubtitle').textContent = chat.participants.map(p => '@' + p.username).join(', ');
 
     await loadMessages();
-
-    if (chatSocket) {
-        chatSocket.close();
-    }
-
-    const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsUrl = `${wsScheme}://${window.location.host}/ws/chat/${chatId}/?token=${token}`;
-    
-    chatSocket = new WebSocket(wsUrl);
-
-    chatSocket.onmessage = function(e) {
-        try {
-            const data = JSON.parse(e.data);
-            if (data.type === 'chat_message') {
-                appendMessage(data.message);
-            }
-        } catch (err) {
-            console.error("Erro ao processar mensagem WebSocket:", err);
-        }
-    };
-
-    chatSocket.onclose = function(e) {
-        console.log('Conexão WebSocket fechada para chat:', chatId);
-    };
-
-    chatSocket.onerror = function(err) {
-        console.error('Erro na conexão WebSocket:', err);
-    };
 }
 
 // Retorna para a lista de conversas no mobile
@@ -240,11 +245,6 @@ function showSidebarOnMobile() {
     
     activeChatId = null;
     renderChatList();
-    
-    if (chatSocket) {
-        chatSocket.close();
-        chatSocket = null;
-    }
 }
 
 document.getElementById('backBtn').addEventListener('click', showSidebarOnMobile);
@@ -305,7 +305,7 @@ document.getElementById('messageForm').addEventListener('submit', (event) => {
     if (!content || !activeChatId) return;
 
     if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-        chatSocket.send(JSON.stringify({ content: content }));
+        chatSocket.send(JSON.stringify({ chatId: activeChatId, content: content }));
         input.value = '';
     } else {
         console.error("Conexão WebSocket não está ativa.");
@@ -444,5 +444,6 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 });
 
 loadChats();
+connectWebSocket();
 </script>
 {% endblock %}
