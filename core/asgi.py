@@ -14,13 +14,18 @@ from channels.auth import AuthMiddlewareStack
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 
-#Preparando o roteador principal
+# Initialize Django ASGI application early to ensure AppRegistry is populated.
+django_asgi_app = get_asgi_application()
+
+import chat.routing
+
+# Preparando o roteador principal
 application = ProtocolTypeRouter({
-    "http": get_asgi_application(),
+    "http": django_asgi_app,
     "websocket": AuthMiddlewareStack(
         URLRouter(
-            # Rotas WebSocket
-            []
+            chat.routing.websocket_urlpatterns
         )
     ),
 })
+
