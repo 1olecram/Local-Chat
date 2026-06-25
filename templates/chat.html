@@ -2,9 +2,9 @@
 {% block title %}Local Chat{% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-[300px_1fr] gap-4 h-[calc(100vh-150px)]">
+<div class="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-4 h-[calc(100vh-120px)] lg:h-[calc(100vh-150px)]">
 
-    <aside class="bg-panel border border-border rounded-2xl flex flex-col overflow-hidden">
+    <aside id="chatSidebar" class="bg-panel border border-border rounded-2xl flex flex-col overflow-hidden h-full lg:flex">
         <div class="p-4 border-b border-border flex items-center justify-between">
             <span class="font-semibold text-sm">Conversas</span>
             <button id="newChatBtn" title="Nova conversa"
@@ -21,7 +21,7 @@
         </div>
     </aside>
 
-    <section class="bg-panel border border-border rounded-2xl flex flex-col overflow-hidden">
+    <section id="chatWindow" class="bg-panel border border-border rounded-2xl flex flex-col overflow-hidden h-full hidden lg:flex">
         <div id="emptyState" class="flex-1 flex items-center justify-center text-center px-6">
             <div>
                 <p class="text-sub text-sm font-medium">Nenhuma conversa selecionada</p>
@@ -29,11 +29,18 @@
             </div>
         </div>
 
-        <div id="activeChat" class="flex-1 flex flex-col hidden">
+        <div id="activeChat" class="flex-1 flex flex-col min-h-0 hidden">
             <div class="px-5 py-3.5 border-b border-border flex items-center justify-between">
-                <div>
-                    <p id="chatTitle" class="font-semibold text-sm">-</p>
-                    <p id="chatSubtitle" class="text-sub text-xs mt-0.5">-</p>
+                <div class="flex items-center gap-3">
+                    <button id="backBtn" class="lg:hidden p-1 -ml-1 text-sub hover:text-ink transition" title="Voltar para a lista">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                        </svg>
+                    </button>
+                    <div>
+                        <p id="chatTitle" class="font-semibold text-sm">-</p>
+                        <p id="chatSubtitle" class="text-sub text-xs mt-0.5">-</p>
+                    </div>
                 </div>
             </div>
 
@@ -171,6 +178,16 @@ async function openChat(chatId) {
     activeChatId = chatId;
     renderChatList();
 
+    // Transição visual no mobile para focar na conversa
+    if (window.innerWidth < 1024) {
+        const sidebar = document.getElementById('chatSidebar');
+        const windowEl = document.getElementById('chatWindow');
+        sidebar.classList.add('hidden');
+        sidebar.classList.remove('flex');
+        windowEl.classList.remove('hidden');
+        windowEl.classList.add('flex');
+    }
+
     const chat = chats.find(c => c.id === chatId);
     document.getElementById('emptyState').classList.add('hidden');
     document.getElementById('activeChat').classList.remove('hidden');
@@ -207,6 +224,30 @@ async function openChat(chatId) {
         console.error('Erro na conexão WebSocket:', err);
     };
 }
+
+// Retorna para a lista de conversas no mobile
+function showSidebarOnMobile() {
+    if (window.innerWidth < 1024) {
+        const sidebar = document.getElementById('chatSidebar');
+        const windowEl = document.getElementById('chatWindow');
+        
+        sidebar.classList.remove('hidden');
+        sidebar.classList.add('flex');
+        
+        windowEl.classList.add('hidden');
+        windowEl.classList.remove('flex');
+    }
+    
+    activeChatId = null;
+    renderChatList();
+    
+    if (chatSocket) {
+        chatSocket.close();
+        chatSocket = null;
+    }
+}
+
+document.getElementById('backBtn').addEventListener('click', showSidebarOnMobile);
 
 async function loadMessages() {
     if (!activeChatId) return;
