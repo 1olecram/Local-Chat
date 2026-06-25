@@ -21,47 +21,21 @@ git clone https://github.com/1olecram/Local-Chat.git
 cd Local-Chat
 ```
 
-### 2. Criar o banco de dados
+### 2. Iniciar o Banco de Dados (PostgreSQL via Docker)
 
-Crie um banco chamado `local_chat` no seu PostgreSQL (via pgAdmin, ou
-pelo `psql`):
+O projeto está configurado para utilizar PostgreSQL. Para subir uma instância local rapidamente com Docker Compose:
 
-```sql
-CREATE DATABASE local_chat;
+```bash
+docker compose up -d
 ```
 
-### 3. ⚠️ Configurar a senha do banco (passo obrigatório)
+> **Nota:** O banco será iniciado no host na porta `5435` para evitar conflitos caso você já possua um PostgreSQL local rodando na porta padrão `5432`.
+> As credenciais padrão do banco configuradas no container são:
+> - **Banco:** `local_chat`
+> - **Usuário:** `postgres`
+> - **Senha:** `916810`
+> - **Porta:** `5435`
 
-O arquivo `core/settings.py` lê a configuração do banco a partir de
-variáveis de ambiente, com valores padrão de fallback:
-
-```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'local_chat'),
-        'USER': os.environ.get('DB_USER', 'postgres'),
-        'PASSWORD': os.environ.get('DB_PASSWORD', 'postgres'),
-        'HOST': os.environ.get('DB_HOST', 'localhost'),
-        'PORT': os.environ.get('DB_PORT', '5432'),
-    }
-}
-```
-
-**Se a senha do seu usuário `postgres` local não for `postgres`**, o
-projeto não vai conseguir conectar no banco. Você tem duas opções:
-
-- **Opção A (mais simples):** edite diretamente o valor padrão no
-  `core/settings.py`, trocando `'postgres'` em `DB_PASSWORD` pela sua
-  senha real.
-- **Opção B:** defina a variável de ambiente antes de rodar os
-  comandos, sem precisar editar o código:
-  ```powershell
-  $env:DB_PASSWORD = "sua_senha_aqui"
-  ```
-
-> Isso vale também para `DB_USER`, `DB_NAME`, `DB_HOST` e `DB_PORT`,
-> caso seu ambiente use valores diferentes dos padrões.
 
 ### 4. Criar e ativar o ambiente virtual
 
@@ -85,25 +59,29 @@ pip install -r requirements.txt
 ### 6. Aplicar as migrations
 
 ```bash
-python manage.py migrate
+DB_PORT=5435 python manage.py migrate
 ```
-
-Se der erro de conexão aqui, volte ao passo 3 — geralmente é a senha
-do banco.
 
 ### 7. (Opcional) Criar um superusuário
 
-Permite acessar o painel administrativo em `/admin/` para inspecionar
-usuários, chats e mensagens direto pelo navegador.
+Permite acessar o painel administrativo em `/admin/` para inspecionar usuários, chats e mensagens.
 
 ```bash
-python manage.py createsuperuser
+DB_PORT=5435 python manage.py createsuperuser
 ```
 
-### 8. Rodar o servidor
+### 8. Rodar o servidor ASGI (Daphne)
+
+Como o projeto utiliza comunicação em tempo real via WebSockets, é recomendado iniciar o servidor ASGI **Daphne**:
 
 ```bash
-python manage.py runserver
+DB_PORT=5435 daphne -b 0.0.0.0 -p 8000 core.asgi:application
+```
+
+Ou usando o comando de desenvolvimento do Django (que foi configurado para usar Daphne):
+
+```bash
+DB_PORT=5435 python manage.py runserver
 ```
 
 ### 9. Acessar a aplicação
@@ -154,16 +132,12 @@ Todas as rotas abaixo (exceto registro/login) exigem o header
   rotas em si — são views function-based puras do Django).
 - Um único modelo `Chat` cobre tanto conversas 1:1 quanto em grupo
   (1:N): a diferença é apenas a quantidade de `Participants`.
-- A interface de chat atualiza mensagens por polling (a cada 3s), não
-  via WebSocket — a integração com Channels/Daphne (já presente nas
-  dependências do projeto) é um próximo passo pendente.
+- A interface de chat e a comunicação em tempo real foram completamente implementadas com WebSockets utilizando Django Channels e Daphne, removendo a necessidade de polling síncrono.
 - A criação de conversas usa busca por nome de usuário e uma listagem
   geral de usuários cadastrados, em vez de exigir o ID do destinatário
   — mais próximo da experiência de apps de chat reais.
 
 ## Pendências conhecidas
 
-- Comunicação em tempo real via WebSocket ainda não implementada
-  (atualmente é feita por polling no front-end).
 - Testes automatizados (unitários, integração, carga) ainda não
   cobrem os novos endpoints.
